@@ -1,0 +1,66 @@
+vaccinetrain=read.csv(file.choose(),na.strings = c("","NA"))
+vaccinetest=read.csv(file.choose(),na.strings = c("","NA"))
+vaccinelabels=read.csv(file.choose(),na.strings = c("","NA"))
+# EDA - Exploratory Data Analysis
+# Seasonal Vaccine
+table(vaccinelabels$seasonal_vaccine) # Balanced Data
+# h1n1 Vaccine
+table(vaccinelabels$h1n1_vaccine) # Imbalanced Data
+# All Variables as per Problem Description are non numeric
+# and Categorical - Frequency Table & Cross Tabulations
+# Hypothesis Test - Chi Square test of Independence
+# Do majority people have knowledge of h1n1?
+table(vaccinetrain$h1n1_knowledge) # little knowledge
+# How may little knowledge people took h1n1 vaccine?
+table(vaccinelabels$h1n1_vaccine,vaccinetrain$h1n1_knowledge)
+barplot(table(vaccinetrain$h1n1_knowledge,vaccinelabels$h1n1_vaccine),
+        legend=T, args.legend = list(x = "bottom"))
+
+# Test Null No Association between seasonal_vaccine & 
+# chronic_med_condition
+table(vaccinelabels$seasonal_vaccine,vaccinetrain$chronic_med_condition)
+# Null - No Association between both variables
+# Alt - Association between both variables
+chisq.test(vaccinelabels$seasonal_vaccine,
+           vaccinetrain$chronic_med_condition)
+
+# Test Null No Association between health_insurance and h1n1_vaccine
+round(prop.table(table(vaccinetrain$health_insurance,
+           vaccinelabels$h1n1_vaccine)),digits = 2)
+proportions(table(vaccinetrain$health_insurance,
+                  vaccinelabels$h1n1_vaccine))
+# prop.table() & proportions() - convert table to percentage
+chisq.test(vaccinetrain$health_insurance,vaccinelabels$h1n1_vaccine)
+
+# Data Preprocessing
+# Missing Values - Find NA's
+sort(colSums(is.na(vaccinetrain)),decreasing = T)
+table(vaccinetrain$employment_occupation)
+table(vaccinetrain$employment_industry)
+chisq.test(vaccinelabels$seasonal_vaccine,
+           vaccinetrain$employment_industry)
+chisq.test(vaccinelabels$seasonal_vaccine,
+           vaccinetrain$employment_occupation)
+# Impute NA's in variables employment occupation, employment industry
+# health insurance as "missing"
+# Combine both train and test for preprocessing
+combinedf=rbind(vaccinetrain,vaccinetest) # Row wise Concatenation
+
+combinedf$employment_occupation=ifelse(
+  is.na(combinedf$employment_occupation),"missing",
+  combinedf$employment_occupation)
+
+combinedf$employment_industry=ifelse(
+  is.na(combinedf$employment_industry),"missing",
+  combinedf$employment_industry)
+
+combinedf$health_insurance=ifelse(is.na(combinedf$health_insurance),
+                                  "missing",
+                                  combinedf$health_insurance)
+# Convert all Independent Variables into Factors or Dummy Encoding
+combinedfdummy=lapply(combinedf[-1],factor)
+combinedfdummy=data.frame(combinedfdummy)
+str(combinedfdummy)
+library(mice)
+imp=mice(combinedfdummy,m=2,maxit = 2,method="rf")
+combinedfdummyimp=complete(imp)
